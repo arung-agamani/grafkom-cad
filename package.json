@@ -1,0 +1,17 @@
+{
+  "name": "awooCAD",
+  "version": "0.0.1",
+  "description": "2D CAD Web-based application",
+  "main": "index.js",
+  "repository": "https://github.com/arung-agamani/awoo-cad.git",
+  "author": "arung-agamani <arung.agamani@gmail.com>",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "snowpack dev",
+    "build": "snowpack build"
+  },
+  "devDependencies": {
+    "snowpack": "^3.0.11"
+  }
+}

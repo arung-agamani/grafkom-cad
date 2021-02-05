@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AwooCAD</title>
+    <style>
+        body {
+            margin: 0;
+        }
+        .flex {
+            display: flex;
+            flex-direction: row;
+        }
+        .flex-col {
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar {
+            min-width: 200px;
+            max-width: 200px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+    <div class="flex">
+        <div class="sidebar">
+            <p>AwooCAD</p>
+            <div class="flex-col">
+                <p>Mouse position</p>
+                <p>X: <span id="x-pos"></span></p>
+                <p>Y: <span id="y-pos"></span></p>
+            </div>
+            <button id="draw-line">Draw Line</button>
+            <button id="draw-rect">Draw Rectangle</button>
+            <button id="draw-quad">Draw Quads</button>
+        </div>
+        <canvas id="content"></canvas>
+    </div>    
+    <script src="main.js" type="module"></script>
+</body>
+</html>

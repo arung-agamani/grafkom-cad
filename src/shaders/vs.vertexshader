@@ -1,0 +1,6 @@
+attribute vec4 attrib_vertexPos;
+
+
+void main() {
+    gl_Position = attrib_vertexPos;
+}
