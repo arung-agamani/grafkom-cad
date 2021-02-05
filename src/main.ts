@@ -108,7 +108,11 @@ function drawScene(gl: WebGL2RenderingContext, programInfo) {
     const uniformcCol = gl.getUniformLocation(shaderProgram, 'u_fragColor')
     gl.uniform4f(uniformcCol, 0.5, 0.5, 0, 1)
     gl.useProgram(shaderProgram)
-    gl.drawArrays(gl.LINES, 0, vab.length/2 + 1)
+    if (drawingContext === ObjectType.Quad) {
+        gl.drawArrays(gl.LINE_STRIP, 0, vab.length/2 + 1)
+    } else {
+        gl.drawArrays(gl.LINES, 0, vab.length/2 + 1)
+    }
 }
 
 // event handler
@@ -129,11 +133,41 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
             isDrawing = false
             // save current object
             if (drawingContext === ObjectType.Line) {
-                const cadObj = new CADObject(gl.LINES, programInfo.shaderProgram, gl)
+                const cadObj = new CADObject(gl.LINES, programInfo.shaderProgram, gl, ObjectType.Line)
                 cadObj.assignVertexArray([...vab])
                 cadObj.bind()
                 objectManager.addObject(cadObj)
                 console.log('object added')
+            } else if (drawingContext === ObjectType.Rect) {
+                const cadObj = new CADObject(gl.TRIANGLES, programInfo.shaderProgram, gl, ObjectType.Rect)
+                const deltaX = vab[2] - vab[0]
+                const deltaY = vab[3] - vab[1]
+                const localVab = [
+                    vab[0], vab[1],
+                    vab[0] + deltaX, vab[1],
+                    vab[0], vab[1] + deltaY,
+                    vab[0] + deltaX, vab[1],
+                    vab[0], vab[1] + deltaY,
+                    vab[2], vab[3]
+                ]
+                cadObj.assignVertexArray(localVab)
+                cadObj.bind()
+                objectManager.addObject(cadObj)
+                console.log('rect added')
+            } else if (drawingContext === ObjectType.Quad) {
+                const cadObj = new CADObject(gl.TRIANGLES, programInfo.shaderProgram, gl, ObjectType.Quad)
+                const localVab = [
+                    vab[0], vab[1],
+                    vab[2], vab[3],
+                    vab[4], vab[5],
+                    vab[4], vab[5],
+                    vab[6], vab[7],
+                    vab[0], vab[1] 
+                ]
+                cadObj.assignVertexArray(localVab)
+                cadObj.bind()
+                objectManager.addObject(cadObj)
+                console.log('quad added')
             }
             vab.length = 0
         }

@@ -6,14 +6,18 @@ class CADObject {
     public va: Array<number>;
     public vab: WebGLBuffer;
     public type: number;
+    public objType: number;
+    public name: string;
 
-    constructor(type: number, shader: WebGLProgram, gl: WebGL2RenderingContext, pos?: [number, number], color?: [number, number, number, number]) {
+    constructor(type: number, shader: WebGLProgram, gl: WebGL2RenderingContext, objType: number, pos?: [number, number], color?: [number, number, number, number]) {
         this.shader = shader;
         this.gl = gl;
         this.type = type;
+        this.objType = objType;
     }
     
     assignVertexArray(va: Array<number>) { this.va = va }
+    assignName(name: string) { this.name = name}
     
     bind() {
         const gl = this.gl
@@ -22,6 +26,7 @@ class CADObject {
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.va), gl.STATIC_DRAW)
         this.vab = buf
     }
+    
 
     draw() {
         this.bind()
