@@ -23,6 +23,20 @@ export async function initShader(gl: WebGL2RenderingContext) {
     return shaderProgram
 }
 
+export async function initShaderFiles(gl: WebGL2RenderingContext, vert: string, frag: string) {
+    const vs = await loadShader(gl, gl.VERTEX_SHADER, vert)
+    const fs = await loadShader(gl, gl.FRAGMENT_SHADER, frag)
+    const shaderProgram = gl.createProgram()
+    gl.attachShader(shaderProgram, vs)
+    gl.attachShader(shaderProgram, fs)
+    gl.linkProgram(shaderProgram)
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        alert('Error on initializing shader program: ' + gl.getProgramInfoLog(shaderProgram))
+        return null
+    }
+    return shaderProgram
+}
+
 export function init(gl: WebGL2RenderingContext, programInfo: ProgramInfo, vab: Array<number>) {
     console.log('initializing...')
     const posBuf = gl.createBuffer()
@@ -31,6 +45,39 @@ export function init(gl: WebGL2RenderingContext, programInfo: ProgramInfo, vab: 
     programInfo.buffers = {
         posBuf: posBuf
     }
+
+    // texture and render buffers for picking
+    console.log('creating texture buffer')
+    const texBuf = gl.createTexture()
+    gl.bindTexture(gl.TEXTURE_2D, texBuf)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+
+    // depth buffer
+    const depBuf = gl.createRenderbuffer()
+    gl.bindRenderbuffer(gl.RENDERBUFFER, depBuf)
+    function setFrameBufferAttatchmentSizes(width: number, height: number) {
+        gl.bindTexture(gl.TEXTURE_2D, texBuf)
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
+        gl.bindRenderbuffer(gl.RENDERBUFFER, depBuf)
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height)
+    }
+    setFrameBufferAttatchmentSizes(gl.canvas.width, gl.canvas.height)
+
+    // frame buffer
+    const frameBuf = gl.createFramebuffer()
+    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuf)
+
+    const attachmentPoint = gl.COLOR_ATTACHMENT0
+    const lvl = 0
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentPoint, gl.TEXTURE_2D, texBuf, lvl)
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depBuf)
+
+    programInfo.buffers.texBuf = texBuf
+    programInfo.buffers.depBuf = depBuf
+    programInfo.buffers.frameBuf = frameBuf
+    
 }
 
 export function recalcPosBuf(gl: WebGL2RenderingContext, programInfo, vab: Array<number>, mousePos: number[]) {

@@ -6,9 +6,12 @@ class ObjectManager {
     public lineCount = 0;
     public rectCount = 0;
     public quadCount = 0
+    public idCount = 0
+    public selectProgram: WebGLProgram;
 
-    constructor() {
+    constructor(selectProgram?: WebGLProgram) {
         this.objectList = new Array<CADObject>()
+        if (selectProgram) this.selectProgram = selectProgram
     }
 
     addObject(obj: CADObject) {
@@ -32,6 +35,16 @@ class ObjectManager {
         }
     }
 
+    renderTex() {
+        for (const obj of this.objectList) {
+            obj.drawSelect(this.selectProgram)
+        }
+    }
+
+    getObject(id: number) {
+        return this.objectList[id - 1]
+    }
+
     getListOfObjects() {
         const list = new Map<string, string[]>();
         const lineObjName = []
@@ -52,6 +65,12 @@ class ObjectManager {
         list.set('Rect', rectObjName)
         list.set('Quad', quadObjName)
         return list
+    }
+
+    deselectAll() {
+        for (const obj of this.objectList) {
+            obj.setSelected(false)
+        }
     }
 }
 

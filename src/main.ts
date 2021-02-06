@@ -1,14 +1,18 @@
-import { ProgramInfo, ObjectType } from './interfaces';
-import { init, initShader, screenToClipSpace, recalcPosBuf } from './renderer/utils'
+import { ProgramInfo, ObjectType, AppState } from './interfaces';
+import { init, initShader, screenToClipSpace, recalcPosBuf, initShaderFiles } from './renderer/utils'
 import ObjectManager from './objects/manager'
 import CADObject from './objects/CADObject'
 
 let shaders: WebGLProgram = null;
 let mousePos: [number, number] = [0,0];
 let vab = []
-let isDrawing = false;
+let appState: AppState = AppState.Selecting
 let drawingContext = null;
 let vertexLeft = 0;
+let mouseHoverObjId = 0;
+let lastSelectedObjId = -1
+let totalObj = 0
+
 
 function setupUI() {
     const drawLineButton = document.getElementById('draw-line') as HTMLButtonElement
@@ -27,34 +31,23 @@ function setupUI() {
 }
 
 function drawLine() {
-    isDrawing = true;
+    appState = AppState.Drawing
     drawingContext = ObjectType.Line
     vertexLeft = 2;
 }
 
 function drawRect() {
-    isDrawing = true;
+    appState = AppState.Drawing
     drawingContext = ObjectType.Rect
     vertexLeft = 2;
 }
 
 function drawQuad() {
-    isDrawing = true
+    appState = AppState.Drawing
     drawingContext = ObjectType.Quad
     vertexLeft = 4
 }
 
-async function getShader(gl: WebGL2RenderingContext) {
-    if (shaders == null) {
-        shaders = await initShader(gl)
-        console.log('shaders initialized')
-    }
-    return shaders
-}
-
-function getShaderSync(gl: WebGL2RenderingContext) {
-    return shaders
-}
 
 async function main() {
     setupUI()
@@ -68,8 +61,9 @@ async function main() {
     }
 
     let programInfo: ProgramInfo = {};
-    let objectManager: ObjectManager = new ObjectManager()
     programInfo.shaderProgram = await initShader(gl)
+    programInfo.pickProgram = await initShaderFiles(gl, 'select_vert.glsl', 'select_frag.glsl')
+    let objectManager: ObjectManager = new ObjectManager(programInfo.pickProgram)
 
     canvas.addEventListener('mousemove', (event) => {
         printMousePos(canvas, event)
@@ -77,7 +71,6 @@ async function main() {
     canvas.addEventListener('click', (event) => {
         clickEvent(gl, event, objectManager, programInfo)
     }, false)
-    
 
     // render block
     var then = 0;
@@ -87,39 +80,58 @@ async function main() {
         const deltatime = now - then
         gl.clearColor(1,1,1,1)
         gl.clear(gl.COLOR_BUFFER_BIT)
-        if (isDrawing) {
+        // draw tex
+        drawTex(gl, programInfo, objectManager)
+        // get hovered id
+        const pixelX = mousePos[0] * gl.canvas.width / canvas.clientWidth
+        const pixelY = gl.canvas.height - mousePos[1] * gl.canvas.height / canvas.clientHeight - 1
+        const data = new Uint8Array(4)
+        gl.readPixels(pixelX, pixelY, 1,1, gl.RGBA, gl.UNSIGNED_BYTE, data)
+        const id = data[0] + (data[1] << 8) + (data[2] << 16) + (data[3] << 24)
+        mouseHoverObjId = id
+
+        // draw objects, clear framebuffer first
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+        if (appState === AppState.Drawing) {
             recalcPosBuf(gl, programInfo, vab, mousePos)
             drawScene(gl, programInfo)
         }
+        
+
         objectManager.render()
         requestAnimationFrame(render)
     }
     requestAnimationFrame(render)
-
-
 }
 
 function drawScene(gl: WebGL2RenderingContext, programInfo) {
     const shaderProgram = programInfo.shaderProgram
+    gl.useProgram(shaderProgram)
     gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.posBuf)
     const vertexPos = gl.getAttribLocation(shaderProgram, 'attrib_vertexPos')
     gl.vertexAttribPointer(vertexPos, 2, gl.FLOAT, false, 0, 0)
     gl.enableVertexAttribArray(vertexPos)    
     const uniformcCol = gl.getUniformLocation(shaderProgram, 'u_fragColor')
     gl.uniform4f(uniformcCol, 0.5, 0.5, 0, 1)
-    gl.useProgram(shaderProgram)
     if (drawingContext === ObjectType.Quad) {
         gl.drawArrays(gl.LINE_STRIP, 0, vab.length/2 + 1)
     } else {
         gl.drawArrays(gl.LINES, 0, vab.length/2 + 1)
-    }
+    }   
+}
+
+function drawTex(gl: WebGL2RenderingContext, programInfo: ProgramInfo, objManager: ObjectManager) {
+    const { frameBuf } = programInfo.buffers
+    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuf)
+    // gl.enable(gl.CULL_FACE)
+    gl.enable(gl.DEPTH_TEST)
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+    objManager.renderTex()
 }
 
 // event handler
 function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectManager, programInfo: ProgramInfo) {
-    console.log(vab)
-    console.log(isDrawing, vertexLeft)
-    if (isDrawing) {
+    if (appState === AppState.Drawing) {
         const position = [
             event.pageX - event.target.offsetLeft,
             gl.drawingBufferHeight - (event.pageY - event.target.offsetTop)
@@ -127,17 +139,17 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
         const clipPos = screenToClipSpace(position[0], position[1], gl)
         vab.push(clipPos[0])
         vab.push(clipPos[1])
-        console.log(vab)
         vertexLeft--
         if (vertexLeft == 0) {
-            isDrawing = false
-            // save current object
+            appState = AppState.Selecting
             if (drawingContext === ObjectType.Line) {
                 const cadObj = new CADObject(gl.LINES, programInfo.shaderProgram, gl, ObjectType.Line)
                 cadObj.assignVertexArray([...vab])
+                cadObj.assignId(totalObj + 1)
                 cadObj.bind()
                 objectManager.addObject(cadObj)
-                console.log('object added')
+                totalObj++
+                console.log('object added with id ' + totalObj)
             } else if (drawingContext === ObjectType.Rect) {
                 const cadObj = new CADObject(gl.TRIANGLES, programInfo.shaderProgram, gl, ObjectType.Rect)
                 const deltaX = vab[2] - vab[0]
@@ -151,9 +163,11 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
                     vab[2], vab[3]
                 ]
                 cadObj.assignVertexArray(localVab)
+                cadObj.assignId(totalObj + 1)
                 cadObj.bind()
                 objectManager.addObject(cadObj)
-                console.log('rect added')
+                totalObj++
+                console.log('object added with id ' + totalObj)
             } else if (drawingContext === ObjectType.Quad) {
                 const cadObj = new CADObject(gl.TRIANGLES, programInfo.shaderProgram, gl, ObjectType.Quad)
                 const localVab = [
@@ -165,11 +179,22 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
                     vab[0], vab[1] 
                 ]
                 cadObj.assignVertexArray(localVab)
+                cadObj.assignId(totalObj + 1)
                 cadObj.bind()
                 objectManager.addObject(cadObj)
-                console.log('quad added')
+                totalObj++
+                console.log('object added with id ' + totalObj)
             }
             vab.length = 0
+        }
+    } else if (appState === AppState.Selecting) {
+        lastSelectedObjId = mouseHoverObjId
+        if (lastSelectedObjId > 0) {
+            objectManager.getObject(lastSelectedObjId).setSelected(true)
+            document.getElementById('sel-id').innerText = lastSelectedObjId.toString()
+        } else {
+            objectManager.deselectAll()
+            document.getElementById('sel-id').innerText = 'none selected'
         }
     }
 }
@@ -179,11 +204,9 @@ function printMousePos(canvas: HTMLCanvasElement, event) {
     const {x,y} = getMousePosition(canvas, event)
     document.getElementById('x-pos').innerText = x.toString()
     document.getElementById('y-pos').innerText = y.toString()
+    document.getElementById('obj-id').innerText = mouseHoverObjId > 0 ? mouseHoverObjId.toString() : 'none'
     mousePos = [x,y]
 }
-
-
-
 function getMousePosition(canvas: HTMLCanvasElement, event) {
     const bound = canvas.getBoundingClientRect()
     return {

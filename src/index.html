@@ -33,10 +33,19 @@
                 <p>Mouse position</p>
                 <p>X: <span id="x-pos"></span></p>
                 <p>Y: <span id="y-pos"></span></p>
+                <p>hovered  objId: <span id="obj-id"></span></p>
+                <p>selected objId: <span id="sel-id"></span></p>
+            </div>
+            <div class="flex">
+                <button>Select</button>
+                <button>Move</button>
+                <button>Rotate</button>
+                <button>Scale</button>
             </div>
             <button id="draw-line">Draw Line</button>
             <button id="draw-rect">Draw Rectangle</button>
             <button id="draw-quad">Draw Quads</button>
+            <input type="color" name="col-picker" id="col-picker">
         </div>
         <canvas id="content"></canvas>
     </div>    
