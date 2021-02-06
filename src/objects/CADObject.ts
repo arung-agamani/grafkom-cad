@@ -1,3 +1,5 @@
+import { multiplyMatrix, addMatrix } from '../renderer/utils'
+
 class CADObject {
     public pos: [number, number] = [0,0];
     public anchorPoint: [number, number];
@@ -13,6 +15,7 @@ class CADObject {
     public name: string;
     public id: number;
     public isSelected: boolean = false;
+    public projectionMatrix: Array<number>;
 
     constructor(type: number, shader: WebGLProgram, gl: WebGL2RenderingContext, objType: number, pos?: [number, number], color?: [number, number, number, number]) {
         this.shader = shader;
@@ -35,6 +38,7 @@ class CADObject {
     
     assignVertexArray(va: Array<number>) {
         this.va = va
+        console.log(this.va)
         this.computeAnchorPoint()
         const [centerX, centerY] = this.anchorPoint
         const transformedVertexArray = [...this.va]
@@ -43,16 +47,62 @@ class CADObject {
             transformedVertexArray[i+1] -= centerY
         }
         this.va = transformedVertexArray
+        console.log(this.va)
+        console.log(this.anchorPoint)
         this.pos = this.anchorPoint
         this.rotation = 0
         this.scale = [1,1]
+        this.projectionMatrix = this.calculateProjectionMatrix()
     }
     assignName(name: string) { this.name = name }
     assignId(id: number) { this.id = id }
     setSelected(isSelected: boolean) { this.isSelected = isSelected }
 
+    calculateProjectionMatrix(): number[] {
+        if (!(this.va || this.pos || this.rotation || this.scale)) return null
+        const positionMatrix = [
+            1, 0, 0,
+            0, 1, 0,
+            this.pos[0], this.pos[1], 1
+        ]
+        // rotate
+        const rad = this.rotation * Math.PI / 180
+        const cos = Math.cos(rad)
+        const sin = Math.sin(rad)
+        const rotationMatrix = [
+            cos, -sin, 0,
+            sin, cos, 0,
+            0, 0, 1
+        ]
+        // scale
+        const scaleMatrix = [
+            this.scale[0], 0, 0,
+            0, this.scale[1], 0,
+            0, 0, 1
+        ]
+        const rotated = multiplyMatrix(rotationMatrix, scaleMatrix)
+        console.log(rotated)
+        const translated = multiplyMatrix(rotated, positionMatrix)
+        console.log(translated)
+        // let out = multiplyMatrix(positionMatrix, rotationMatrix)
+        // out = multiplyMatrix(out, scaleMatrix)
+        // console.log(out)
+        return translated
+    }
+
     move(x: number, y:number) {
         this.pos = [x,y]
+        this.projectionMatrix = this.calculateProjectionMatrix()
+    }
+
+    rotate(deg: number) {
+        this.rotation = deg
+        this.projectionMatrix = this.calculateProjectionMatrix()
+    }
+
+    scaling(x: number, y: number) {
+        this.scale = [x,y]
+        this.projectionMatrix = this.calculateProjectionMatrix()
     }
     
     bind() {
@@ -72,7 +122,7 @@ class CADObject {
         const vertexPos = gl.getAttribLocation(program, 'attrib_vertexPos')
         const uniformCol = gl.getUniformLocation(program, 'u_fragColor')
         const uniformPos = gl.getUniformLocation(program, 'u_pos')
-        gl.uniform2fv(uniformPos, this.pos)
+        gl.uniformMatrix3fv(uniformPos, false, this.projectionMatrix)
         gl.vertexAttribPointer(
             vertexPos,
             2, // it's 2 dimensional
@@ -96,7 +146,7 @@ class CADObject {
         const vertexPos = gl.getAttribLocation(selectProgram, 'a_Pos')
         const uniformCol = gl.getUniformLocation(selectProgram, 'u_id')
         const uniformPos = gl.getUniformLocation(selectProgram, 'u_pos')
-        gl.uniform2fv(uniformPos, this.pos)
+        gl.uniformMatrix3fv(uniformPos, false, this.projectionMatrix)
         gl.vertexAttribPointer(
             vertexPos,
             2, // it's 2 dimensional

@@ -20,6 +20,9 @@ function setupUI(objectManger: ObjectManager) {
     const drawQuadButton = document.getElementById('draw-quad') as HTMLButtonElement
     const xPosInput = document.getElementById('x-pos-range') as HTMLInputElement
     const yPosInput = document.getElementById('y-pos-range') as HTMLInputElement
+    const rotInput = document.getElementById('rot-input') as HTMLInputElement
+    const xScaleInput = document.getElementById('x-scale-input') as HTMLInputElement
+    const yScaleInput = document.getElementById('y-scale-input') as HTMLInputElement
     
     drawLineButton.addEventListener('click', () => {
         drawLine()
@@ -49,6 +52,26 @@ function setupUI(objectManger: ObjectManager) {
             obj.move(x,y)
             document.getElementById('x-pos-val').innerText = xPos.toString()
             document.getElementById('y-pos-val').innerText = yPos.toString()
+        }
+    })
+    rotInput.addEventListener('change', () => {
+        if (lastSelectedObjId > 0) {
+            const obj = objectManger.getObject(lastSelectedObjId)
+            obj.rotate(parseInt(rotInput.value))
+        }
+    })
+    xScaleInput.addEventListener('change', () => {
+        if (lastSelectedObjId > 0) {
+            const obj = objectManger.getObject(lastSelectedObjId)
+            const [x,y] = [parseInt(xScaleInput.value), parseInt(yScaleInput.value)]
+            obj.scaling(x,y)
+        }
+    })
+    yScaleInput.addEventListener('change', () => {
+        if (lastSelectedObjId > 0) {
+            const obj = objectManger.getObject(lastSelectedObjId)
+            const [x,y] = [parseInt(xScaleInput.value), parseInt(yScaleInput.value)]
+            obj.scaling(x,y)
         }
     })
 
@@ -222,11 +245,15 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
             const obj = objectManager.getObject(lastSelectedObjId)
             obj.setSelected(true)
             const [xPos, yPos] = obj.pos
+            const [rot, xScale, yScale] = [obj.rotation, ...obj.scale]
             document.getElementById('sel-id').innerText = lastSelectedObjId.toString()
             document.getElementById('x-pos-val').innerText = xPos.toString()
             document.getElementById('y-pos-val').innerText = yPos.toString();
             (document.getElementById('x-pos-range') as HTMLInputElement).value = xPos.toString();
             (document.getElementById('y-pos-range') as HTMLInputElement).value = yPos.toString();
+            (document.getElementById('rot-input') as HTMLInputElement).value = rot.toString();
+            (document.getElementById('x-scale-input') as HTMLInputElement).value = xScale.toString();
+            (document.getElementById('y-scale-input') as HTMLInputElement).value = yScale.toString();
         } else {
             objectManager.deselectAll()
             document.getElementById('sel-id').innerText = 'none selected'
