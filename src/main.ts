@@ -14,10 +14,12 @@ let lastSelectedObjId = -1
 let totalObj = 0
 
 
-function setupUI() {
+function setupUI(objectManger: ObjectManager) {
     const drawLineButton = document.getElementById('draw-line') as HTMLButtonElement
     const drawRectButton = document.getElementById('draw-rect') as HTMLButtonElement
     const drawQuadButton = document.getElementById('draw-quad') as HTMLButtonElement
+    const xPosInput = document.getElementById('x-pos-range') as HTMLInputElement
+    const yPosInput = document.getElementById('y-pos-range') as HTMLInputElement
     
     drawLineButton.addEventListener('click', () => {
         drawLine()
@@ -28,6 +30,28 @@ function setupUI() {
     drawQuadButton.addEventListener('click', () => {
         drawQuad()
     })
+
+    xPosInput.addEventListener('input', () => {
+        if (lastSelectedObjId > 0) {
+            const obj = objectManger.getObject(lastSelectedObjId);
+            const [xPos, yPos] = obj.pos;
+            const [x, y] = [parseInt(xPosInput.value), parseInt(yPosInput.value)]
+            obj.move(x,y)
+            document.getElementById('x-pos-val').innerText = xPos.toString()
+            document.getElementById('y-pos-val').innerText = yPos.toString()
+        }        
+    })
+    yPosInput.addEventListener('input', () => {
+        if (lastSelectedObjId > 0) {
+            const obj = objectManger.getObject(lastSelectedObjId)
+            const [xPos, yPos] = obj.pos;
+            const [x, y] = [parseInt(xPosInput.value), parseInt(yPosInput.value)]
+            obj.move(x,y)
+            document.getElementById('x-pos-val').innerText = xPos.toString()
+            document.getElementById('y-pos-val').innerText = yPos.toString()
+        }
+    })
+
 }
 
 function drawLine() {
@@ -50,7 +74,6 @@ function drawQuad() {
 
 
 async function main() {
-    setupUI()
     const canvas = document.getElementById('content') as HTMLCanvasElement
     canvas.width = window.innerWidth - 200
     canvas.height = window.innerHeight
@@ -59,11 +82,13 @@ async function main() {
         alert('WebGL is not supported on this browser/device')
         return
     }
-
+    
     let programInfo: ProgramInfo = {};
-    programInfo.shaderProgram = await initShader(gl)
+    programInfo.shaderProgram = await initShaderFiles(gl, 'draw_vert.glsl', 'draw_frag.glsl')
     programInfo.pickProgram = await initShaderFiles(gl, 'select_vert.glsl', 'select_frag.glsl')
     let objectManager: ObjectManager = new ObjectManager(programInfo.pickProgram)
+    
+    setupUI(objectManager)
 
     canvas.addEventListener('mousemove', (event) => {
         printMousePos(canvas, event)
@@ -80,6 +105,7 @@ async function main() {
         const deltatime = now - then
         gl.clearColor(1,1,1,1)
         gl.clear(gl.COLOR_BUFFER_BIT)
+        gl.viewport(0,0, gl.canvas.width, gl.canvas.height)
         // draw tex
         drawTex(gl, programInfo, objectManager)
         // get hovered id
@@ -89,14 +115,13 @@ async function main() {
         gl.readPixels(pixelX, pixelY, 1,1, gl.RGBA, gl.UNSIGNED_BYTE, data)
         const id = data[0] + (data[1] << 8) + (data[2] << 16) + (data[3] << 24)
         mouseHoverObjId = id
-
+        
         // draw objects, clear framebuffer first
         gl.bindFramebuffer(gl.FRAMEBUFFER, null)
         if (appState === AppState.Drawing) {
             recalcPosBuf(gl, programInfo, vab, mousePos)
             drawScene(gl, programInfo)
         }
-        
 
         objectManager.render()
         requestAnimationFrame(render)
@@ -109,6 +134,8 @@ function drawScene(gl: WebGL2RenderingContext, programInfo) {
     gl.useProgram(shaderProgram)
     gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.posBuf)
     const vertexPos = gl.getAttribLocation(shaderProgram, 'attrib_vertexPos')
+    const resolutionPos = gl.getUniformLocation(shaderProgram, 'u_resolution')
+    gl.uniform2f(resolutionPos, gl.canvas.width, gl.canvas.height)
     gl.vertexAttribPointer(vertexPos, 2, gl.FLOAT, false, 0, 0)
     gl.enableVertexAttribArray(vertexPos)    
     const uniformcCol = gl.getUniformLocation(shaderProgram, 'u_fragColor')
@@ -126,6 +153,9 @@ function drawTex(gl: WebGL2RenderingContext, programInfo: ProgramInfo, objManage
     // gl.enable(gl.CULL_FACE)
     gl.enable(gl.DEPTH_TEST)
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+    gl.useProgram(programInfo.pickProgram)
+    const resolutionPos = gl.getUniformLocation(programInfo.pickProgram, 'u_resolution')
+    gl.uniform2f(resolutionPos, gl.canvas.width, gl.canvas.height)
     objManager.renderTex()
 }
 
@@ -136,9 +166,8 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
             event.pageX - event.target.offsetLeft,
             gl.drawingBufferHeight - (event.pageY - event.target.offsetTop)
         ]
-        const clipPos = screenToClipSpace(position[0], position[1], gl)
-        vab.push(clipPos[0])
-        vab.push(clipPos[1])
+        vab.push(position[0])
+        vab.push(position[1])
         vertexLeft--
         if (vertexLeft == 0) {
             appState = AppState.Selecting
@@ -190,8 +219,14 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
     } else if (appState === AppState.Selecting) {
         lastSelectedObjId = mouseHoverObjId
         if (lastSelectedObjId > 0) {
-            objectManager.getObject(lastSelectedObjId).setSelected(true)
+            const obj = objectManager.getObject(lastSelectedObjId)
+            obj.setSelected(true)
+            const [xPos, yPos] = obj.pos
             document.getElementById('sel-id').innerText = lastSelectedObjId.toString()
+            document.getElementById('x-pos-val').innerText = xPos.toString()
+            document.getElementById('y-pos-val').innerText = yPos.toString();
+            (document.getElementById('x-pos-range') as HTMLInputElement).value = xPos.toString();
+            (document.getElementById('y-pos-range') as HTMLInputElement).value = yPos.toString();
         } else {
             objectManager.deselectAll()
             document.getElementById('sel-id').innerText = 'none selected'

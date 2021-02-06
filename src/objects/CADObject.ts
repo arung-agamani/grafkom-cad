@@ -1,5 +1,8 @@
 class CADObject {
-    public pos: [number, number];
+    public pos: [number, number] = [0,0];
+    public anchorPoint: [number, number];
+    public rotation: number;
+    public scale: [number, number];
     public color: [number, number, number, number];
     public shader: WebGLProgram;
     public gl: WebGL2RenderingContext;
@@ -17,11 +20,40 @@ class CADObject {
         this.type = type;
         this.objType = objType;
     }
+
+    computeAnchorPoint() {
+        if (this.va && this.va.length % 2 === 0) {
+            let sigmaX = 0
+            let sigmaY = 0
+            for (let i = 0; i < this.va.length; i += 2) {
+                sigmaX += this.va[i]
+                sigmaY += this.va[i+1]
+            }
+            this.anchorPoint = [sigmaX / (this.va.length/2), sigmaY / (this.va.length/2)]
+        }
+    }
     
-    assignVertexArray(va: Array<number>) { this.va = va }
+    assignVertexArray(va: Array<number>) {
+        this.va = va
+        this.computeAnchorPoint()
+        const [centerX, centerY] = this.anchorPoint
+        const transformedVertexArray = [...this.va]
+        for (let i = 0; i < transformedVertexArray.length; i += 2) {
+            transformedVertexArray[i] -= centerX
+            transformedVertexArray[i+1] -= centerY
+        }
+        this.va = transformedVertexArray
+        this.pos = this.anchorPoint
+        this.rotation = 0
+        this.scale = [1,1]
+    }
     assignName(name: string) { this.name = name }
     assignId(id: number) { this.id = id }
     setSelected(isSelected: boolean) { this.isSelected = isSelected }
+
+    move(x: number, y:number) {
+        this.pos = [x,y]
+    }
     
     bind() {
         const gl = this.gl
@@ -39,6 +71,8 @@ class CADObject {
         gl.useProgram(program)
         const vertexPos = gl.getAttribLocation(program, 'attrib_vertexPos')
         const uniformCol = gl.getUniformLocation(program, 'u_fragColor')
+        const uniformPos = gl.getUniformLocation(program, 'u_pos')
+        gl.uniform2fv(uniformPos, this.pos)
         gl.vertexAttribPointer(
             vertexPos,
             2, // it's 2 dimensional
@@ -61,6 +95,8 @@ class CADObject {
         gl.useProgram(selectProgram)
         const vertexPos = gl.getAttribLocation(selectProgram, 'a_Pos')
         const uniformCol = gl.getUniformLocation(selectProgram, 'u_id')
+        const uniformPos = gl.getUniformLocation(selectProgram, 'u_pos')
+        gl.uniform2fv(uniformPos, this.pos)
         gl.vertexAttribPointer(
             vertexPos,
             2, // it's 2 dimensional
