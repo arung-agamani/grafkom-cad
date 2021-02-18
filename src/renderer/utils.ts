@@ -81,7 +81,8 @@ export function init(gl: WebGL2RenderingContext, programInfo: ProgramInfo, vab: 
 }
 
 export function recalcPosBuf(gl: WebGL2RenderingContext, programInfo, vab: Array<number>, mousePos: number[]) {
-    const intermediateBuf = [...vab, mousePos[0], gl.drawingBufferHeight - mousePos[1]]
+    const intermediateBuf = [...vab, mousePos[0], mousePos[1]]
+    console.log(intermediateBuf)
     const posBuf = gl.createBuffer()
     gl.bindBuffer(gl.ARRAY_BUFFER, posBuf)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(intermediateBuf), gl.STATIC_DRAW)

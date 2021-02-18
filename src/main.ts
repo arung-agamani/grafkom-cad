@@ -5,6 +5,7 @@ import CADObject from './objects/CADObject'
 
 let shaders: WebGLProgram = null;
 let mousePos: [number, number] = [0,0];
+let mousePosVertNormalized: [number, number] = [0,0];
 let vab = []
 let appState: AppState = AppState.Selecting
 let drawingContext = null;
@@ -114,7 +115,7 @@ async function main() {
     setupUI(objectManager)
 
     canvas.addEventListener('mousemove', (event) => {
-        printMousePos(canvas, event)
+        printMousePos(canvas, event, gl)
     }, false)
     canvas.addEventListener('click', (event) => {
         clickEvent(gl, event, objectManager, programInfo)
@@ -142,7 +143,7 @@ async function main() {
         // draw objects, clear framebuffer first
         gl.bindFramebuffer(gl.FRAMEBUFFER, null)
         if (appState === AppState.Drawing) {
-            recalcPosBuf(gl, programInfo, vab, mousePos)
+            recalcPosBuf(gl, programInfo, vab, mousePosVertNormalized)
             drawScene(gl, programInfo)
         }
 
@@ -158,7 +159,14 @@ function drawScene(gl: WebGL2RenderingContext, programInfo) {
     gl.bindBuffer(gl.ARRAY_BUFFER, programInfo.buffers.posBuf)
     const vertexPos = gl.getAttribLocation(shaderProgram, 'attrib_vertexPos')
     const resolutionPos = gl.getUniformLocation(shaderProgram, 'u_resolution')
+    const uniformPos = gl.getUniformLocation(shaderProgram, 'u_pos')
+    const identityMatrix = [
+        1, 0, 0,
+        0, 1, 0,
+        0, 0, 1
+    ]
     gl.uniform2f(resolutionPos, gl.canvas.width, gl.canvas.height)
+    gl.uniformMatrix3fv(uniformPos, false, identityMatrix)
     gl.vertexAttribPointer(vertexPos, 2, gl.FLOAT, false, 0, 0)
     gl.enableVertexAttribArray(vertexPos)    
     const uniformcCol = gl.getUniformLocation(shaderProgram, 'u_fragColor')
@@ -262,12 +270,17 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
 }
 
 
-function printMousePos(canvas: HTMLCanvasElement, event) {
+function printMousePos(canvas: HTMLCanvasElement, event, gl: WebGL2RenderingContext) {
+    const position = [
+        event.pageX - event.target.offsetLeft,
+        gl.drawingBufferHeight - (event.pageY - event.target.offsetTop)
+    ]
     const {x,y} = getMousePosition(canvas, event)
     document.getElementById('x-pos').innerText = x.toString()
     document.getElementById('y-pos').innerText = y.toString()
     document.getElementById('obj-id').innerText = mouseHoverObjId > 0 ? mouseHoverObjId.toString() : 'none'
     mousePos = [x,y]
+    mousePosVertNormalized = [position[0], position[1]]
 }
 function getMousePosition(canvas: HTMLCanvasElement, event) {
     const bound = canvas.getBoundingClientRect()
