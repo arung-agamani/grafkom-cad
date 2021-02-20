@@ -11,8 +11,10 @@ let appState: AppState = AppState.Selecting
 let drawingContext = null;
 let vertexLeft = 0;
 let mouseHoverObjId = 0;
+let mouseHoverVertId = -1;
 let previouslySelectedObjId = -1
 let lastSelectedObjId = -1
+let lastSelectedVertId = -1
 let totalObj = 0
 let isMouseDown = false;
 
@@ -146,6 +148,11 @@ async function main() {
     }, false)
     canvas.addEventListener('mousedown', () => {
         isMouseDown = true
+        if (appState === AppState.Moving) {
+            if (mouseHoverVertId > 0)
+                lastSelectedVertId = mouseHoverVertId
+            document.getElementById('vsel-id').innerText = lastSelectedVertId.toString()
+        }
     })
     canvas.addEventListener('mouseup', () => {
         isMouseDown = false
@@ -157,7 +164,7 @@ async function main() {
     function render(now) {
         now *= 0.001
         const deltatime = now - then
-        gl.clearColor(0,0,0,1)
+        gl.clearColor(1,1,1,1)
         gl.clear(gl.COLOR_BUFFER_BIT)
         gl.viewport(0,0, gl.canvas.width, gl.canvas.height)
         // draw tex
@@ -167,8 +174,17 @@ async function main() {
         const pixelY = gl.canvas.height - mousePos[1] * gl.canvas.height / canvas.clientHeight - 1
         const data = new Uint8Array(4)
         gl.readPixels(pixelX, pixelY, 1,1, gl.RGBA, gl.UNSIGNED_BYTE, data)
-        const id = data[0] + (data[1] << 8) + (data[2] << 16) + (data[3] << 24)
-        mouseHoverObjId = id
+        if (data[3] === 0xFF && (data[2] != 0xFF && data[1] != 0xFF, data[0] != 0xFF)) {
+            const id = data[0] + (data[1] << 8) + (data[2] << 16)
+            mouseHoverVertId = id
+        } else {
+            mouseHoverVertId = -1
+        }
+        if (data[3] === 0x00) {
+            const id = data[0] + (data[1] << 8) + (data[2] << 16)
+            mouseHoverObjId = id
+        }
+        
         
         // draw objects, clear framebuffer first
         gl.bindFramebuffer(gl.FRAMEBUFFER, null)
@@ -218,7 +234,7 @@ function drawTex(gl: WebGL2RenderingContext, programInfo: ProgramInfo, objManage
     gl.useProgram(programInfo.pickProgram)
     const resolutionPos = gl.getUniformLocation(programInfo.pickProgram, 'u_resolution')
     gl.uniform2f(resolutionPos, gl.canvas.width, gl.canvas.height)
-    objManager.renderTex()
+    objManager.renderTex(programInfo)
 }
 
 // event handler
@@ -240,50 +256,44 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
                 cadObj.bind()
                 objectManager.addObject(cadObj)
                 totalObj++
-                console.log('object added with id ' + totalObj)
             } else if (drawingContext === ObjectType.Rect) {
                 const cadObj = new CADObject(gl.TRIANGLES, programInfo.shaderProgram, gl, ObjectType.Rect)
                 const deltaX = vab[2] - vab[0]
                 const deltaY = vab[3] - vab[1]
                 const localVab = [
                     vab[0], vab[1],
-                    vab[0] + deltaX, vab[1],
                     vab[0], vab[1] + deltaY,
+                    vab[2], vab[3],
                     vab[0] + deltaX, vab[1],
-                    vab[0], vab[1] + deltaY,
-                    vab[2], vab[3]
                 ]
                 cadObj.assignVertexArray(localVab)
                 cadObj.assignId(totalObj + 1)
                 cadObj.bind()
                 objectManager.addObject(cadObj)
                 totalObj++
-                console.log('object added with id ' + totalObj)
             } else if (drawingContext === ObjectType.Quad) {
                 const cadObj = new CADObject(gl.TRIANGLES, programInfo.shaderProgram, gl, ObjectType.Quad)
                 const localVab = [
                     vab[0], vab[1],
                     vab[2], vab[3],
                     vab[4], vab[5],
-                    vab[4], vab[5],
-                    vab[6], vab[7],
-                    vab[0], vab[1] 
+                    vab[6], vab[7]
                 ]
                 cadObj.assignVertexArray(localVab)
                 cadObj.assignId(totalObj + 1)
                 cadObj.bind()
                 objectManager.addObject(cadObj)
                 totalObj++
-                console.log('object added with id ' + totalObj)
             }
             vab.length = 0
         }
     } else if (appState === AppState.Selecting) {
         previouslySelectedObjId = lastSelectedObjId
         lastSelectedObjId = mouseHoverObjId
-        if (lastSelectedObjId > 0 && lastSelectedObjId != previouslySelectedObjId) {
+        if (lastSelectedObjId != 0 && lastSelectedObjId != previouslySelectedObjId) {
             objectManager.getObject(previouslySelectedObjId)?.deselect()
             const obj = objectManager.getObject(lastSelectedObjId)
+            if (!obj) return
             obj.setSelected(true)
             const [xPos, yPos] = obj.pos
             const [rot, xScale, yScale] = [obj.rotation, ...obj.scale]
@@ -297,6 +307,7 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
             (document.getElementById('y-scale-input') as HTMLInputElement).value = yScale.toString();
         } else {
             objectManager.deselectAll()
+            previouslySelectedObjId = -1
             document.getElementById('sel-id').innerText = 'none selected'
         }
     }
@@ -310,7 +321,11 @@ function dragEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectManag
         ]
         const obj = objectManager.getObject(lastSelectedObjId)
         if (!obj) return;
-        obj.move(position[0], position[1])
+        if (lastSelectedVertId > 0 && mouseHoverVertId > 0) {
+            obj.moveVertex(lastSelectedVertId - 1, position[0], position[1])
+        } else {
+            obj.move(position[0], position[1])
+        }
     }
 }
 
@@ -324,6 +339,7 @@ function printMousePos(canvas: HTMLCanvasElement, event, gl: WebGL2RenderingCont
     document.getElementById('x-pos').innerText = x.toString()
     document.getElementById('y-pos').innerText = y.toString()
     document.getElementById('obj-id').innerText = mouseHoverObjId > 0 ? mouseHoverObjId.toString() : 'none'
+    document.getElementById('vert-id').innerText = mouseHoverVertId != -1 ? mouseHoverVertId.toString() : 'none'
     mousePos = [x,y]
     mousePosVertNormalized = [position[0], position[1]]
 }

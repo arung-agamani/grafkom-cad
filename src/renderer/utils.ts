@@ -38,7 +38,6 @@ export async function initShaderFiles(gl: WebGL2RenderingContext, vert: string, 
 }
 
 export function init(gl: WebGL2RenderingContext, programInfo: ProgramInfo, vab: Array<number>) {
-    console.log('initializing...')
     const posBuf = gl.createBuffer()
     gl.bindBuffer(gl.ARRAY_BUFFER, posBuf)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vab), gl.STATIC_DRAW)
@@ -47,7 +46,6 @@ export function init(gl: WebGL2RenderingContext, programInfo: ProgramInfo, vab: 
     }
 
     // texture and render buffers for picking
-    console.log('creating texture buffer')
     const texBuf = gl.createTexture()
     gl.bindTexture(gl.TEXTURE_2D, texBuf)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)

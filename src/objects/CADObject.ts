@@ -10,6 +10,7 @@ class CADObject {
     public shader: WebGLProgram;
     public gl: WebGL2RenderingContext;
     public va: Array<number>;
+    public ia_length: number;
     public vab: WebGLBuffer;
     public type: number;
     public objType: number;
@@ -40,7 +41,6 @@ class CADObject {
     
     assignVertexArray(va: Array<number>) {
         this.va = va
-        console.log(this.va)
         this.computeAnchorPoint()
         const [centerX, centerY] = this.anchorPoint
         const transformedVertexArray = [...this.va]
@@ -49,18 +49,16 @@ class CADObject {
             transformedVertexArray[i+1] -= centerY
         }
         this.va = transformedVertexArray
-        console.log(this.va)
-        console.log(this.anchorPoint)
         this.pos = this.anchorPoint
-        this.rotation = 0
-        this.scale = [1,1]
+        this.rotation = this.rotation || 0
+        this.scale = this.scale || [1,1]
         this.projectionMatrix = this.calculateProjectionMatrix()
     }
     assignName(name: string) { this.name = name }
     assignId(id: number) { this.id = id }
     setColor(color: [number, number, number, number]) { this.color = color }
     setSelected(isSelected: boolean) {
-        isSelected ? console.log('selecting ' + this.id) : console.log('deselecting ' + this.id)
+        // isSelected ? console.log('selecting ' + this.id) : console.log('deselecting ' + this.id)
         this.isSelected = isSelected
         this.originalColor = [...this.color]
         this.setColor([0.9, 0, 0, 1])
@@ -93,17 +91,28 @@ class CADObject {
             0, 0, 1
         ]
         const rotated = multiplyMatrix(rotationMatrix, scaleMatrix)
-        console.log(rotated)
         const translated = multiplyMatrix(rotated, positionMatrix)
-        console.log(translated)
-        // let out = multiplyMatrix(positionMatrix, rotationMatrix)
-        // out = multiplyMatrix(out, scaleMatrix)
-        // console.log(out)
         return translated
     }
 
     move(x: number, y:number) {
         this.pos = [x,y]
+        this.projectionMatrix = this.calculateProjectionMatrix()
+    }
+
+    moveVertex(idx: number, x: number, y: number) {
+        this.va[idx*2] = x - this.pos[0]
+        this.va[idx*2+1] = y - this.pos[1]
+        this.computeAnchorPoint()
+        const [centerX, centerY] = this.anchorPoint
+        const transformedVertexArray = [...this.va]
+        for (let i = 0; i < transformedVertexArray.length; i += 2) {
+            transformedVertexArray[i] -= centerX
+            transformedVertexArray[i+1] -= centerY
+        }
+        this.va = transformedVertexArray
+        this.pos[0] += this.anchorPoint[0]
+        this.pos[1] += this.anchorPoint[1]
         this.projectionMatrix = this.calculateProjectionMatrix()
     }
 
@@ -123,6 +132,22 @@ class CADObject {
         gl.bindBuffer(gl.ARRAY_BUFFER, buf)
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.va), gl.STATIC_DRAW)
         this.vab = buf
+        const indexBuffer = gl.createBuffer()
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer)
+        const indices = []
+        if (this.type != gl.LINES) {
+            for (let i = 2; i < this.va.length/2; i++) {
+                indices.push(i-1)
+                indices.push(i)
+                indices.push(0)
+            }
+        } else {
+            indices.push(0)
+            indices.push(1)
+        }
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW)
+        this.ia_length = indices.length
+
     }
     
 
@@ -137,7 +162,7 @@ class CADObject {
         gl.uniformMatrix3fv(uniformPos, false, this.projectionMatrix)
         gl.vertexAttribPointer(
             vertexPos,
-            2, // it's 2 dimensional
+            2, // it's 2 dimensional    
             gl.FLOAT,
             false,
             0,
@@ -147,7 +172,7 @@ class CADObject {
         if (this.color) {
             gl.uniform4fv(uniformCol, this.color)
         }
-        gl.drawArrays(this.type, 0, this.va.length/2)
+        gl.drawElements(this.type, this.ia_length, gl.UNSIGNED_SHORT, 0)
     }
 
     drawSelect(selectProgram: WebGLProgram) {
@@ -175,7 +200,7 @@ class CADObject {
             ((id >> 24) & 0xFF) / 0xFF,
         ]
         gl.uniform4fv(uniformCol, uniformId)
-        gl.drawArrays(this.type, 0, this.va.length/2)
+        gl.drawElements(this.type, this.ia_length, gl.UNSIGNED_SHORT, 0)
     }
 
     drawPoint(vertPointProgram: WebGLProgram) {
@@ -201,18 +226,27 @@ class CADObject {
         if (this.color) {
             gl.uniform4fv(uniformCol, this.color)
         }
-        gl.lineWidth(10)
-        gl.drawArrays(gl.POINTS, 0, this.va.length/2)
+        gl.uniform4fv(uniformCol, [0.0, 0.0, 1.0, 1.0])
+        if (this.ia_length > 3) {
+            gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, 2)
+            gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, 4)
+            gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, 0)
+            for (let i = 3; i < this.ia_length; i+=3) {
+                gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, (i+1)*2)
+            }
+        } else {
+            gl.drawElements(gl.POINTS, 2, gl.UNSIGNED_SHORT, 0)
+        }
     }
 
     drawPointSelect(selectProgram: WebGLProgram) {
         this.bind()
         const gl = this.gl
-        const id = this.id
         gl.useProgram(selectProgram)
         const vertexPos = gl.getAttribLocation(selectProgram, 'a_Pos')
         const uniformCol = gl.getUniformLocation(selectProgram, 'u_id')
         const uniformPos = gl.getUniformLocation(selectProgram, 'u_pos')
+        const resolutionPos = gl.getUniformLocation(selectProgram, 'u_resolution')
         gl.uniformMatrix3fv(uniformPos, false, this.projectionMatrix)
         gl.vertexAttribPointer(
             vertexPos,
@@ -223,15 +257,35 @@ class CADObject {
             0
         )
         gl.enableVertexAttribArray(vertexPos)
-        const uniformId = [
-            ((id >> 0) & 0xFF) / 0xFF,
-            ((id >> 8) & 0xFF) / 0xFF,
-            ((id >> 16) & 0xFF) / 0xFF,
-            ((id >> 24) & 0xFF) / 0xFF,
-        ]
-        gl.uniform4fv(uniformCol, uniformId)
-        gl.drawArrays(gl.POINTS, 0, this.va.length/2)
+        gl.uniform2f(resolutionPos, gl.canvas.width, gl.canvas.height)
+        if (this.ia_length > 3) {
+            gl.uniform4fv(uniformCol, setElementId(2))
+            gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, 0)
+            gl.uniform4fv(uniformCol, setElementId(3))
+            gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, 2)
+            gl.uniform4fv(uniformCol, setElementId(1))
+            gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, 4)
+            for (let i = 3; i < this.ia_length; i+=3) {
+                gl.uniform4fv(uniformCol, setElementId(i+1))
+                gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, (i+1)*2)
+            }
+        } else {
+            gl.uniform4fv(uniformCol, setElementId(1))
+            gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, 0)
+            gl.uniform4fv(uniformCol, setElementId(2))
+            gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, 2)
+        }        
     }
+}
+
+function setElementId(id: number) {
+    const uniformId = [
+        ((id >> 0) & 0xFF) / 0xFF,
+        ((id >> 8) & 0xFF) / 0xFF,
+        ((id >> 16) & 0xFF) / 0xFF,
+        0x69,
+    ]
+    return uniformId
 }
 
 export default CADObject

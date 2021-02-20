@@ -36,9 +36,14 @@ class ObjectManager {
         }
     }
 
-    renderTex() {
+    renderTex(programInfo: ProgramInfo) {
         for (const obj of this.objectList) {
-            obj.drawSelect(this.selectProgram)
+            if (obj.isSelected) {
+                obj.drawPointSelect(programInfo.vertSelectProgram)
+                obj.drawSelect(programInfo.pickProgram)
+            } else {
+                obj.drawSelect(programInfo.pickProgram)
+            }
         }
     }
 

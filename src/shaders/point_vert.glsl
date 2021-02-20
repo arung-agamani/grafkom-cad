@@ -1,9 +1,7 @@
-
 attribute vec2 a_Pos;
 
 uniform vec2 u_resolution;
 uniform mat3 u_pos;
-
 
 void main() {
     vec2 position = (u_pos * vec3(a_Pos, 1)).xy;
