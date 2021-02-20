@@ -177,6 +177,61 @@ class CADObject {
         gl.uniform4fv(uniformCol, uniformId)
         gl.drawArrays(this.type, 0, this.va.length/2)
     }
+
+    drawPoint(vertPointProgram: WebGLProgram) {
+        this.bind()
+        const program = vertPointProgram
+        const gl = this.gl
+        gl.useProgram(program)
+        const vertexPos = gl.getAttribLocation(program, 'a_Pos')
+        const uniformCol = gl.getUniformLocation(program, 'u_fragColor')
+        const uniformPos = gl.getUniformLocation(program, 'u_pos')
+        const resolutionPos = gl.getUniformLocation(program, 'u_resolution')
+        gl.uniformMatrix3fv(uniformPos, false, this.projectionMatrix)
+        gl.vertexAttribPointer(
+            vertexPos,
+            2, // it's 2 dimensional
+            gl.FLOAT,
+            false,
+            0,
+            0
+        )
+        gl.uniform2f(resolutionPos, gl.canvas.width, gl.canvas.height)
+        gl.enableVertexAttribArray(vertexPos)
+        if (this.color) {
+            gl.uniform4fv(uniformCol, this.color)
+        }
+        gl.lineWidth(10)
+        gl.drawArrays(gl.POINTS, 0, this.va.length/2)
+    }
+
+    drawPointSelect(selectProgram: WebGLProgram) {
+        this.bind()
+        const gl = this.gl
+        const id = this.id
+        gl.useProgram(selectProgram)
+        const vertexPos = gl.getAttribLocation(selectProgram, 'a_Pos')
+        const uniformCol = gl.getUniformLocation(selectProgram, 'u_id')
+        const uniformPos = gl.getUniformLocation(selectProgram, 'u_pos')
+        gl.uniformMatrix3fv(uniformPos, false, this.projectionMatrix)
+        gl.vertexAttribPointer(
+            vertexPos,
+            2, // it's 2 dimensional
+            gl.FLOAT,
+            false,
+            0,
+            0
+        )
+        gl.enableVertexAttribArray(vertexPos)
+        const uniformId = [
+            ((id >> 0) & 0xFF) / 0xFF,
+            ((id >> 8) & 0xFF) / 0xFF,
+            ((id >> 16) & 0xFF) / 0xFF,
+            ((id >> 24) & 0xFF) / 0xFF,
+        ]
+        gl.uniform4fv(uniformCol, uniformId)
+        gl.drawArrays(gl.POINTS, 0, this.va.length/2)
+    }
 }
 
 export default CADObject

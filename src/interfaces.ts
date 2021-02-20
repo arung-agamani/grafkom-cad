@@ -1,6 +1,8 @@
 export interface ProgramInfo {
     shaderProgram?: WebGLProgram;
     pickProgram?: WebGLProgram;
+    vertPointProgram?: WebGLProgram;
+    vertSelectProgram?: WebGLProgram;
     buffers?: Buffers;
 }
 

@@ -14,6 +14,7 @@ let mouseHoverObjId = 0;
 let previouslySelectedObjId = -1
 let lastSelectedObjId = -1
 let totalObj = 0
+let isMouseDown = false;
 
 
 function setupUI(objectManger: ObjectManager) {
@@ -25,6 +26,10 @@ function setupUI(objectManger: ObjectManager) {
     const rotInput = document.getElementById('rot-input') as HTMLInputElement
     const xScaleInput = document.getElementById('x-scale-input') as HTMLInputElement
     const yScaleInput = document.getElementById('y-scale-input') as HTMLInputElement
+    const selectButton = document.getElementById('select-button') as HTMLInputElement
+    const moveButton = document.getElementById('move-button') as HTMLInputElement
+    const rotateButton = document.getElementById('rotate-button') as HTMLInputElement
+    const scaleButton = document.getElementById('scale-button') as HTMLInputElement
     
     drawLineButton.addEventListener('click', () => {
         drawLine()
@@ -35,6 +40,21 @@ function setupUI(objectManger: ObjectManager) {
     drawQuadButton.addEventListener('click', () => {
         drawQuad()
     })
+
+    selectButton.addEventListener('click', () => {
+        appState = AppState.Selecting
+    })
+    moveButton.addEventListener('click', () => {
+        appState = AppState.Moving
+    })
+    rotateButton.addEventListener('click', () => {
+        appState = AppState.Rotating
+    })
+    scaleButton.addEventListener('click', () => {
+        appState = AppState.Scaling
+    })
+
+
 
     xPosInput.addEventListener('input', () => {
         if (lastSelectedObjId > 0) {
@@ -111,16 +131,25 @@ async function main() {
     let programInfo: ProgramInfo = {};
     programInfo.shaderProgram = await initShaderFiles(gl, 'draw_vert.glsl', 'draw_frag.glsl')
     programInfo.pickProgram = await initShaderFiles(gl, 'select_vert.glsl', 'select_frag.glsl')
+    programInfo.vertPointProgram = await initShaderFiles(gl, 'point_vert.glsl', 'point_frag.glsl')
+    programInfo.vertSelectProgram = await initShaderFiles(gl, 'point_vert.glsl', 'selectPoint_frag.glsl')
     let objectManager: ObjectManager = new ObjectManager(programInfo.pickProgram)
     
     setupUI(objectManager)
 
     canvas.addEventListener('mousemove', (event) => {
         printMousePos(canvas, event, gl)
+        dragEvent(gl, event, objectManager, programInfo)
     }, false)
     canvas.addEventListener('click', (event) => {
         clickEvent(gl, event, objectManager, programInfo)
     }, false)
+    canvas.addEventListener('mousedown', () => {
+        isMouseDown = true
+    })
+    canvas.addEventListener('mouseup', () => {
+        isMouseDown = false
+    })
 
     // render block
     var then = 0;
@@ -128,7 +157,7 @@ async function main() {
     function render(now) {
         now *= 0.001
         const deltatime = now - then
-        gl.clearColor(1,1,1,1)
+        gl.clearColor(0,0,0,1)
         gl.clear(gl.COLOR_BUFFER_BIT)
         gl.viewport(0,0, gl.canvas.width, gl.canvas.height)
         // draw tex
@@ -148,7 +177,8 @@ async function main() {
             drawScene(gl, programInfo)
         }
 
-        objectManager.render()
+        objectManager.render(programInfo)
+        // objectManager.renderPoint(programInfo.vertPointProgram)
         requestAnimationFrame(render)
     }
     requestAnimationFrame(render)
@@ -269,6 +299,18 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
             objectManager.deselectAll()
             document.getElementById('sel-id').innerText = 'none selected'
         }
+    }
+}
+
+function dragEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectManager, programInfo: ProgramInfo) {
+    if (appState === AppState.Moving && isMouseDown) {
+        const position = [
+            event.pageX - event.target.offsetLeft,
+            gl.drawingBufferHeight - (event.pageY - event.target.offsetTop)
+        ]
+        const obj = objectManager.getObject(lastSelectedObjId)
+        if (!obj) return;
+        obj.move(position[0], position[1])
     }
 }
 

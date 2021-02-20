@@ -1,5 +1,5 @@
 import CADObject from './CADObject'
-import { ObjectType } from '../interfaces'
+import { ObjectType, ProgramInfo } from '../interfaces'
 
 class ObjectManager {
     public objectList: CADObject[];
@@ -29,15 +29,22 @@ class ObjectManager {
         this.objectList.push(obj)
     }
     
-    render() {
+    render(programInfo: ProgramInfo) {
         for (const obj of this.objectList) {
             obj.draw()
+            if (obj.isSelected) obj.drawPoint(programInfo.vertPointProgram)
         }
     }
 
     renderTex() {
         for (const obj of this.objectList) {
             obj.drawSelect(this.selectProgram)
+        }
+    }
+
+    renderPoint(vertPointProgram: WebGLProgram) {
+        for (const obj of this.objectList) {
+            obj.drawPoint(vertPointProgram)
         }
     }
 
