@@ -6,6 +6,7 @@ class CADObject {
     public rotation: number;
     public scale: [number, number];
     public color: [number, number, number, number];
+    public originalColor: [number, number, number, number];
     public shader: WebGLProgram;
     public gl: WebGL2RenderingContext;
     public va: Array<number>;
@@ -22,6 +23,7 @@ class CADObject {
         this.gl = gl;
         this.type = type;
         this.objType = objType;
+        this.color = [0.5, 0.5, 0.5, 1.0]
     }
 
     computeAnchorPoint() {
@@ -56,7 +58,17 @@ class CADObject {
     }
     assignName(name: string) { this.name = name }
     assignId(id: number) { this.id = id }
-    setSelected(isSelected: boolean) { this.isSelected = isSelected }
+    setColor(color: [number, number, number, number]) { this.color = color }
+    setSelected(isSelected: boolean) {
+        isSelected ? console.log('selecting ' + this.id) : console.log('deselecting ' + this.id)
+        this.isSelected = isSelected
+        this.originalColor = [...this.color]
+        this.setColor([0.9, 0, 0, 1])
+    }
+    deselect() {
+        this.isSelected = false
+        if (this.originalColor) this.color = [...this.originalColor]
+    }
 
     calculateProjectionMatrix(): number[] {
         if (!(this.va || this.pos || this.rotation || this.scale)) return null

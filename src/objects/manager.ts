@@ -69,7 +69,8 @@ class ObjectManager {
 
     deselectAll() {
         for (const obj of this.objectList) {
-            obj.setSelected(false)
+            // obj.setSelected(false)
+            obj.deselect()
         }
     }
 }

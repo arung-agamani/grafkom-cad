@@ -11,6 +11,7 @@ let appState: AppState = AppState.Selecting
 let drawingContext = null;
 let vertexLeft = 0;
 let mouseHoverObjId = 0;
+let previouslySelectedObjId = -1
 let lastSelectedObjId = -1
 let totalObj = 0
 
@@ -248,8 +249,10 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
             vab.length = 0
         }
     } else if (appState === AppState.Selecting) {
+        previouslySelectedObjId = lastSelectedObjId
         lastSelectedObjId = mouseHoverObjId
-        if (lastSelectedObjId > 0) {
+        if (lastSelectedObjId > 0 && lastSelectedObjId != previouslySelectedObjId) {
+            objectManager.getObject(previouslySelectedObjId)?.deselect()
             const obj = objectManager.getObject(lastSelectedObjId)
             obj.setSelected(true)
             const [xPos, yPos] = obj.pos
