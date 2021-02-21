@@ -4,65 +4,134 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AwooCAD</title>
-    <style>
-        body {
-            margin: 0;
-        }
-        .flex {
-            display: flex;
-            flex-direction: row;
-        }
-        .flex-col {
-            display: flex;
-            flex-direction: column;
-        }
-        .sidebar {
-            min-width: 200px;
-            max-width: 200px;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="flex">
         <div class="sidebar">
-            <p>AwooCAD</p>
-            <div class="flex-col">
-                <label>Mouse position</label>
-                <label>X: <span id="x-pos"></span></label>
-                <label>Y: <span id="y-pos"></span></label>
-                <label>hovered  objId: <span id="obj-id"></span></label>
-                <label>selected objId: <span id="sel-id"></span></label>
-                <label>hovered vertId: <span id="vert-id"></span></label>
-                <label>selected vertId: <span id="vsel-id"></span></label>
-            </div>
-            <div class="flex">
+            <!-- <p>AwooCAD</p> -->
+            <p class="menu-title">Action</p>
+            <div class="action">
                 <button id="select-button">Select</button>
                 <button id="move-button">Move</button>
-                <button id="rotate-button">Rotate</button>
-                <button id="scale-button">Scale</button>
             </div>
-            <div class="flex-col">
-                <label for="">X Pos : <span id="x-pos-val"></span></label>
+
+            <p class="menu-title">Position</p>
+            <div class="position">
+                <label for="">X Position : <span id="x-pos-val"></span></label>
                 <input type="range" name="" min="-1000" max="1000" value=0 id="x-pos-range">
-                <label for="">Y Pos : <span id="y-pos-val"></span></label>
+                <label for="">Y Position : <span id="y-pos-val"></span></label>
                 <input type="range" name="" min="-1000" max="1000" value=0 id="y-pos-range">
-                <label for="">Rotation : <span id="y-pos-val"></span></label>
+            </div>
+
+            <p class="menu-title">Rotation</p>
+            <div class="rotation">
+                <!-- <label for="">Rotation : <span id="y-pos-val"></span></label><br/> -->
                 <input type="text" name="" id="rot-input">
+                <button id="rotate-button">Rotate</button>
+            </div>
+
+            <p class="menu-title">Scale</p>
+            <div class="scale">
                 <label for="">X Scale : <span id="x-scale-val"></span></label>
                 <input type="text" name="" id="x-scale-input">
                 <label for="">Y Scale : <span id="y-scale-val"></span></label>
                 <input type="text" name="" id="y-scale-input">
+                <button id="scale-button">Scale</button>
             </div>
-            <button id="draw-line">Draw Line</button>
-            <button id="draw-rect">Draw Rectangle</button>
-            <button id="draw-quad">Draw Quads</button>
+
+            <p class="menu-title">Color</p>
             <input type="color" name="col-picker" id="col-picker">
         </div>
         <canvas id="content"></canvas>
-    </div>    
+    </div>
+    
+    <div class="stats">
+        <h2>STATS</h2>
+        <table>
+            <tr>
+                <td>Mouse Position</td>
+                <td>X: <span id="x-pos"></span></td>
+            </tr>
+            <tr>
+                <td></td>
+                <td>Y: <span id="y-pos"></span></td>
+            </tr>
+            <tr>
+                <td>Hovered Object Id</td>
+                <td><span id="obj-id"></span></td>
+            </tr>
+            <tr>
+                <td>Selected Object Id</td>
+                <td><span id="sel-id"></span></td>
+            </tr>
+            <tr>
+                <td>Hovered Vertex Id</td>
+                <td><span id="vert-id"></span></td>
+            </tr>
+            <tr>
+                <td>Selected Vertex Id</td>
+                <td><span id="vsel-id"></span></td>
+            </tr>
+
+        </table>
+    </div>
+
+    <div class="menu-button">
+        <button id="draw-line">LINE</button>
+        <button id="draw-rect">RECTANGLE</button>
+        <button id="draw-quad">QUADS</button>
+    </div>
+
+    <div class="help">
+        <button data-modal-target="#modal"> ? </button>
+        <div class="modal" id="modal">
+            <div class="popup-header">
+                <div class="title">HELP</div>
+                <button data-close-button class="close-button">&times;</button>
+            </div>
+            <div class="popup-body">Isi Help</div>
+        </div>
+        <div id="overlay"></div>
+    </div> 
+    <script>
+        const openModalButtons = document.querySelectorAll('[data-modal-target]')
+        const closeModalButtons = document.querySelectorAll('[data-close-button]')
+        const overlay = document.getElementById('overlay')
+    
+        openModalButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const modal = document.querySelector(button.dataset.modalTarget)
+                openModal(modal)
+            })
+        })
+    
+        overlay.addEventListener('click', () => {
+            const modals = document.querySelectorAll('.modal.active')
+            modals.forEach(modal => {
+                closeModal(modal)
+            })
+        })
+    
+        closeModalButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const modal = button.closest('.modal')
+                closeModal(modal)
+            })
+        })
+    
+        function openModal(modal) {
+            if (modal == null) return
+            modal.classList.add('active')
+            overlay.classList.add('active')
+        }
+    
+        function closeModal(modal) {
+            if (modal == null) return
+            modal.classList.remove('active')
+            overlay.classList.remove('active')
+        }
+    </script>
     <script src="main.js" type="module"></script>
 </body>
 </html>

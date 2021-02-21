@@ -152,7 +152,7 @@ function drawQuad() {
 
 async function main() {
     const canvas = document.getElementById('content') as HTMLCanvasElement
-    canvas.width = window.innerWidth - 200
+    canvas.width = window.innerWidth*0.8
     canvas.height = window.innerHeight
     const gl = canvas.getContext('webgl2')
     if (!gl) {
@@ -340,7 +340,7 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
         } else {
             objectManager.deselectAll()
             previouslySelectedObjId = -1
-            document.getElementById('sel-id').innerText = 'none selected'
+            document.getElementById('sel-id').innerText = 'none'
         }
     }
 }
