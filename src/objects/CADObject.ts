@@ -61,11 +61,11 @@ class CADObject {
         // isSelected ? console.log('selecting ' + this.id) : console.log('deselecting ' + this.id)
         this.isSelected = isSelected
         this.originalColor = [...this.color]
-        this.setColor([0.9, 0, 0, 1])
+        // this.setColor([0.9, 0, 0, 1])
     }
     deselect() {
         this.isSelected = false
-        if (this.originalColor) this.color = [...this.originalColor]
+        // if (this.originalColor) this.color = [...this.originalColor]
     }
 
     calculateProjectionMatrix(): number[] {
@@ -124,6 +124,10 @@ class CADObject {
     scaling(x: number, y: number) {
         this.scale = [x,y]
         this.projectionMatrix = this.calculateProjectionMatrix()
+    }
+
+    coloring(r: number, g: number, b: number, a:number) {
+        this.setColor([r,g,b,a]);
     }
     
     bind() {

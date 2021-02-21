@@ -32,7 +32,8 @@ function setupUI(objectManger: ObjectManager) {
     const moveButton = document.getElementById('move-button') as HTMLInputElement
     const rotateButton = document.getElementById('rotate-button') as HTMLInputElement
     const scaleButton = document.getElementById('scale-button') as HTMLInputElement
-    
+    const colorInput = document.getElementById('col-picker') as HTMLInputElement
+
     drawLineButton.addEventListener('click', () => {
         drawLine()
     })
@@ -99,6 +100,35 @@ function setupUI(objectManger: ObjectManager) {
         }
     })
 
+    colorInput.addEventListener('input', () => {
+        if (lastSelectedObjId > 0) {
+            const obj = objectManger.getObject(lastSelectedObjId);
+            const color = hexToRgb(colorInput.value);
+            obj.coloring(color.r, color.g, color.b, 1);
+        }
+    })
+}
+
+function hexToRgb(hex) {
+    var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    hex = hex.replace(shorthandRegex, function(m, r, g, b) {
+      return r + r + g + g + b + b;
+    });
+  
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16)/256,
+      g: parseInt(result[2], 16)/256,
+      b: parseInt(result[3], 16)/256
+    } : null;
+}
+
+function rgbToHex(red, green, blue) {
+    red *= 256
+    green *= 256
+    blue *= 256
+    const rgb = (red << 16) | (green << 8) | (blue << 0);
+    return '#' + (0x1000000 + rgb).toString(16).slice(1);
 }
 
 function drawLine() {
@@ -297,6 +327,7 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
             obj.setSelected(true)
             const [xPos, yPos] = obj.pos
             const [rot, xScale, yScale] = [obj.rotation, ...obj.scale]
+            const color = rgbToHex(obj.color[0], obj.color[1], obj.color[2])
             document.getElementById('sel-id').innerText = lastSelectedObjId.toString()
             document.getElementById('x-pos-val').innerText = xPos.toString()
             document.getElementById('y-pos-val').innerText = yPos.toString();
@@ -305,6 +336,7 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
             (document.getElementById('rot-input') as HTMLInputElement).value = rot.toString();
             (document.getElementById('x-scale-input') as HTMLInputElement).value = xScale.toString();
             (document.getElementById('y-scale-input') as HTMLInputElement).value = yScale.toString();
+            (document.getElementById('col-picker') as HTMLInputElement).value = color;
         } else {
             objectManager.deselectAll()
             previouslySelectedObjId = -1
