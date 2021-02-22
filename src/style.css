@@ -8,6 +8,7 @@ button {
     cursor: pointer;
     border: none;
     outline-style: none;
+    text-transform: uppercase;
 }
 .flex {
     display: flex;
@@ -142,12 +143,15 @@ td:nth-child(even){
     transition: 200ms ease-in-out;
     z-index: 10;
     background-color: white;
-    width: 800px;
-    max-width: 80%;
+    width: 1000px;
+    max-width: 90%;
     max-height: 90%;
-    /* overflow-y: scroll; */
+    overflow-y: scroll;
 }
-
+.help-body {
+    overflow-y: scroll;
+    height: 100%;
+}
 .modal.active {
     transform: translate(-50%, -50%) scale(1);
 }
@@ -160,6 +164,9 @@ td:nth-child(even){
     font-weight: bold;
     font-size: 24px;
     border-bottom: 2px solid #424242;
+    position: sticky;
+    top: 0;
+    background-color: white;
 
 }
 
@@ -174,7 +181,7 @@ td:nth-child(even){
 
 .popup-body {
     padding: 30px;
-    text-align: center;
+    text-align: left;
 }
 
 #overlay {
@@ -193,4 +200,10 @@ td:nth-child(even){
 #overlay.active {
     opacity: 1;
     pointer-events: all;
+}
+.gif{
+    display: flex;
+}
+.gif img {
+    flex-grow: 1;
 }
