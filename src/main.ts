@@ -88,14 +88,16 @@ function setupUI(objectManger: ObjectManager) {
     xScaleInput.addEventListener('change', () => {
         if (lastSelectedObjId > 0) {
             const obj = objectManger.getObject(lastSelectedObjId)
-            const [x,y] = [parseInt(xScaleInput.value), parseInt(yScaleInput.value)]
+            //const [x,y] = [parseInt(xScaleInput.value), parseInt(yScaleInput.value)]
+            const [x,y] = [parseFloat(xScaleInput.value), parseFloat(yScaleInput.value)]
             obj.scaling(x,y)
         }
     })
     yScaleInput.addEventListener('change', () => {
         if (lastSelectedObjId > 0) {
             const obj = objectManger.getObject(lastSelectedObjId)
-            const [x,y] = [parseInt(xScaleInput.value), parseInt(yScaleInput.value)]
+            //const [x,y] = [parseInt(xScaleInput.value), parseInt(yScaleInput.value)]
+            const [x,y] = [parseFloat(xScaleInput.value), parseFloat(yScaleInput.value)]
             obj.scaling(x,y)
         }
     })
