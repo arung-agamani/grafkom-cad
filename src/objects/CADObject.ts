@@ -269,9 +269,11 @@ class CADObject {
             gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, 2)
             gl.uniform4fv(uniformCol, setElementId(1))
             gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, 4)
+            let lastVertId = 4
             for (let i = 3; i < this.ia_length; i+=3) {
-                gl.uniform4fv(uniformCol, setElementId(i+1))
+                gl.uniform4fv(uniformCol, setElementId(lastVertId))
                 gl.drawElements(gl.POINTS, 1, gl.UNSIGNED_SHORT, (i+1)*2)
+                lastVertId++
             }
         } else {
             gl.uniform4fv(uniformCol, setElementId(1))

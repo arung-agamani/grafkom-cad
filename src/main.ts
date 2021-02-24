@@ -23,6 +23,7 @@ function setupUI(objectManger: ObjectManager) {
     const drawLineButton = document.getElementById('draw-line') as HTMLButtonElement
     const drawRectButton = document.getElementById('draw-rect') as HTMLButtonElement
     const drawQuadButton = document.getElementById('draw-quad') as HTMLButtonElement
+    const drawPolyButton = document.getElementById('draw-poly') as HTMLButtonElement
     const xPosInput = document.getElementById('x-pos-range') as HTMLInputElement
     const yPosInput = document.getElementById('y-pos-range') as HTMLInputElement
     const rotInput = document.getElementById('rot-input') as HTMLInputElement
@@ -42,6 +43,9 @@ function setupUI(objectManger: ObjectManager) {
     })
     drawQuadButton.addEventListener('click', () => {
         drawQuad()
+    })
+    drawPolyButton.addEventListener('click', () => {
+        drawPoly()
     })
 
     selectButton.addEventListener('click', () => {
@@ -151,6 +155,12 @@ function drawQuad() {
     vertexLeft = 4
 }
 
+function drawPoly() {
+    appState = AppState.Drawing
+    drawingContext = ObjectType.Poly
+    vertexLeft = 999
+}
+
 
 async function main() {
     const canvas = document.getElementById('content') as HTMLCanvasElement
@@ -188,6 +198,12 @@ async function main() {
     })
     canvas.addEventListener('mouseup', () => {
         isMouseDown = false
+    })
+    document.addEventListener('keydown', (event) => {
+        if (appState === AppState.Drawing && drawingContext === ObjectType.Poly && event.key === 'Enter') {
+            console.log("Enter pressed")
+            onKeyEnterEvent(gl, event, objectManager, programInfo)
+        }
     })
 
     // render block
@@ -250,7 +266,7 @@ function drawScene(gl: WebGL2RenderingContext, programInfo) {
     gl.enableVertexAttribArray(vertexPos)    
     const uniformcCol = gl.getUniformLocation(shaderProgram, 'u_fragColor')
     gl.uniform4f(uniformcCol, 0.5, 0.5, 0, 1)
-    if (drawingContext === ObjectType.Quad) {
+    if (drawingContext === ObjectType.Quad || drawingContext === ObjectType.Poly) {
         gl.drawArrays(gl.LINE_STRIP, 0, vab.length/2 + 1)
     } else {
         gl.drawArrays(gl.LINES, 0, vab.length/2 + 1)
@@ -316,6 +332,14 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
                 cadObj.bind()
                 objectManager.addObject(cadObj)
                 totalObj++
+            } else if (drawingContext === ObjectType.Poly) {
+                const cadObj = new CADObject(gl.TRIANGLES, programInfo.shaderProgram, gl, ObjectType.Poly)
+                cadObj.assignVertexArray([...vab])
+                cadObj.assignId(totalObj + 1)
+                cadObj.bind()
+                objectManager.addObject(cadObj)
+                totalObj++
+                console.log('poly created')
             }
             vab.length = 0
         }
@@ -345,6 +369,19 @@ function clickEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectMana
             document.getElementById('sel-id').innerText = 'none'
         }
     }
+}
+
+function onKeyEnterEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectManager, programInfo: ProgramInfo) {
+    vertexLeft = 0
+    appState = AppState.Selecting
+    const cadObj = new CADObject(gl.TRIANGLES, programInfo.shaderProgram, gl, ObjectType.Poly)
+    cadObj.assignVertexArray([...vab])
+    cadObj.assignId(totalObj + 1)
+    cadObj.bind()
+    objectManager.addObject(cadObj)
+    totalObj++
+    console.log('poly created')
+    vab.length = 0
 }
 
 function dragEvent(gl: WebGL2RenderingContext, event, objectManager: ObjectManager, programInfo: ProgramInfo) {

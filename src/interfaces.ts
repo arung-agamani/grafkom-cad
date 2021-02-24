@@ -18,7 +18,8 @@ export enum ObjectType {
     Point,
     Line,
     Rect,
-    Quad
+    Quad,
+    Poly
 }
 
 export enum AppState {
