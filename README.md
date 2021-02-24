@@ -29,7 +29,7 @@ npm install
 ### Running App
 After the dependencies have all been installed, run the following command in the CMD/terminal
 ```
-npm run start
+npm start
 ```
 If the apps is ran successfully, the following message will pop-up on the CMD/terminal
 ```
