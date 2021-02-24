@@ -62,6 +62,8 @@ function setupUI(objectManger: ObjectManager) {
         const readFile = (e) => {
             const file = e.target.files[0]
             if (!file) {
+                document.body.removeChild(loadFileInput)
+                loadFileInput = null
                 return
             }
             const fileReader = new FileReader()
@@ -69,10 +71,6 @@ function setupUI(objectManger: ObjectManager) {
                 const content = evt.target.result as string
                 const parsed = JSON.parse(content) as AppData
                 objectManger.load(parsed.objectData, programInfo.shaderProgram, glReference)
-                // glReference.clearColor(1,1,1,1)
-                // glReference.clear(glReference.COLOR_BUFFER_BIT)
-                // glReference.viewport(0,0, glReference.canvas.width, glReference.canvas.height)
-                // objectManger.render(programInfo)
                 document.body.removeChild(loadFileInput)
                 loadFileInput = null
                 drawScene(glReference, programInfo)
