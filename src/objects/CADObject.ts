@@ -1,3 +1,4 @@
+import { ObjectData } from '../interfaces';
 import { multiplyMatrix, addMatrix } from '../renderer/utils'
 
 class CADObject {
@@ -25,6 +26,40 @@ class CADObject {
         this.type = type;
         this.objType = objType;
         this.color = [0.5, 0.5, 0.5, 1.0]
+    }
+
+    getData(): ObjectData {
+        const obj: ObjectData = {
+            pos: this.pos,
+            anchorPoint: this.anchorPoint,
+            rotation: this.rotation,
+            scale: this.scale,
+            color: this.color,
+            originalColor: this.originalColor,
+            ia_length: this.ia_length,
+            va: this.va,
+            type: this.type,
+            objType: this.objType,
+            name: this.name,
+            id: this.id,
+            projectionMatrix: this.projectionMatrix
+        }
+        return obj
+    }
+
+    setData(obj: ObjectData) {
+        this.pos = obj.pos
+        this.anchorPoint = obj.anchorPoint
+        this.rotation = obj.rotation
+        this.scale = obj.scale
+        this.color = obj.color
+        this.originalColor = obj.originalColor
+        this.va = obj.va
+        this.ia_length = obj.ia_length
+        this.type = obj.type
+        this.objType = obj.objType
+        this.id = obj.id
+        this.projectionMatrix = obj.projectionMatrix
     }
 
     computeAnchorPoint() {

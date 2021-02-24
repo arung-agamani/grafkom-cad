@@ -1,5 +1,5 @@
-import { ProgramInfo, ObjectType, AppState } from './interfaces';
-import { init, initShader, screenToClipSpace, recalcPosBuf, initShaderFiles } from './renderer/utils'
+import { ProgramInfo, ObjectType, AppState, ObjectData, AppData } from './interfaces';
+import { init, initShader, download, recalcPosBuf, initShaderFiles } from './renderer/utils'
 import ObjectManager from './objects/manager'
 import CADObject from './objects/CADObject'
 
@@ -18,12 +18,19 @@ let lastSelectedVertId = -1
 let totalObj = 0
 let isMouseDown = false;
 
+let programInfo: ProgramInfo = {};
+let glReference: WebGL2RenderingContext;
+
+let loadFileInput = null;
+
 
 function setupUI(objectManger: ObjectManager) {
     const drawLineButton = document.getElementById('draw-line') as HTMLButtonElement
     const drawRectButton = document.getElementById('draw-rect') as HTMLButtonElement
     const drawQuadButton = document.getElementById('draw-quad') as HTMLButtonElement
     const drawPolyButton = document.getElementById('draw-poly') as HTMLButtonElement
+    const loadButton = document.getElementById('load-button') as HTMLButtonElement
+    const saveButton = document.getElementById('save-button') as HTMLButtonElement
     const xPosInput = document.getElementById('x-pos-range') as HTMLInputElement
     const yPosInput = document.getElementById('y-pos-range') as HTMLInputElement
     const rotInput = document.getElementById('rot-input') as HTMLInputElement
@@ -46,6 +53,45 @@ function setupUI(objectManger: ObjectManager) {
     })
     drawPolyButton.addEventListener('click', () => {
         drawPoly()
+    })
+
+    loadButton.addEventListener('click', () => {
+        const fileInput = document.createElement('input')
+        fileInput.type = 'file'
+        fileInput.style.display = 'none'
+        const readFile = (e) => {
+            const file = e.target.files[0]
+            if (!file) {
+                return
+            }
+            const fileReader = new FileReader()
+            fileReader.onload = (evt) => {
+                const content = evt.target.result as string
+                const parsed = JSON.parse(content) as AppData
+                objectManger.load(parsed.objectData, programInfo.shaderProgram, glReference)
+                // glReference.clearColor(1,1,1,1)
+                // glReference.clear(glReference.COLOR_BUFFER_BIT)
+                // glReference.viewport(0,0, glReference.canvas.width, glReference.canvas.height)
+                // objectManger.render(programInfo)
+                document.body.removeChild(loadFileInput)
+                loadFileInput = null
+                drawScene(glReference, programInfo)
+            }
+            fileReader.readAsText(file)
+        }
+        fileInput.onchange = readFile
+        document.body.appendChild(fileInput)
+        loadFileInput = fileInput
+        fileInput.click()
+        
+    })
+    saveButton.addEventListener('click', () => {
+        const data: ObjectData[] = objectManger.getAllObjectData()
+        const fileContent: AppData = {
+            createdAt: new Date(),
+            objectData: data
+        }
+        download(JSON.stringify(fileContent), "awoocad-data.json", "application/json")
     })
 
     selectButton.addEventListener('click', () => {
@@ -167,12 +213,13 @@ async function main() {
     canvas.width = window.innerWidth*0.8
     canvas.height = window.innerHeight
     const gl = canvas.getContext('webgl2')
+    glReference = gl
     if (!gl) {
         alert('WebGL is not supported on this browser/device')
         return
     }
     
-    let programInfo: ProgramInfo = {};
+    
     programInfo.shaderProgram = await initShaderFiles(gl, 'draw_vert.glsl', 'draw_frag.glsl')
     programInfo.pickProgram = await initShaderFiles(gl, 'select_vert.glsl', 'select_frag.glsl')
     programInfo.vertPointProgram = await initShaderFiles(gl, 'point_vert.glsl', 'point_frag.glsl')
@@ -240,7 +287,6 @@ async function main() {
             recalcPosBuf(gl, programInfo, vab, mousePosVertNormalized)
             drawScene(gl, programInfo)
         }
-
         objectManager.render(programInfo)
         // objectManager.renderPoint(programInfo.vertPointProgram)
         requestAnimationFrame(render)

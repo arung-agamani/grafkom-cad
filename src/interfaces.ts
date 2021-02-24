@@ -22,6 +22,27 @@ export enum ObjectType {
     Poly
 }
 
+export interface ObjectData {
+    pos: [number, number];
+    anchorPoint: [number, number];
+    rotation: number;
+    scale: [number, number];
+    color: [number, number, number, number];
+    originalColor: [number, number, number, number];
+    ia_length: number;
+    va: Array<number>;
+    type: number;
+    objType: number;
+    name: String;
+    id: number;
+    projectionMatrix: Array<number>;
+}
+
+export interface AppData {
+    objectData: ObjectData[];
+    createdAt: Date;
+}
+
 export enum AppState {
     Drawing,
     Selecting,

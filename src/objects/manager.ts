@@ -1,5 +1,5 @@
 import CADObject from './CADObject'
-import { ObjectType, ProgramInfo } from '../interfaces'
+import { ObjectData, ObjectType, ProgramInfo } from '../interfaces'
 
 class ObjectManager {
     public objectList: CADObject[];
@@ -77,6 +77,22 @@ class ObjectManager {
         list.set('Rect', rectObjName)
         list.set('Quad', quadObjName)
         return list
+    }
+
+    getAllObjectData() {
+        const objects: ObjectData[] = []
+        for (const obj of this.objectList) {
+            objects.push(obj.getData())
+        }
+        return objects
+    }
+
+    load(objectData: ObjectData[], shader: WebGLProgram, gl: WebGL2RenderingContext) {
+        for (const loadedObj of objectData) {
+            const obj = new CADObject(gl.LINES, shader, gl, ObjectType.Line)
+            obj.setData(loadedObj)
+            this.objectList.push(obj)
+        }
     }
 
     deselectAll() {
